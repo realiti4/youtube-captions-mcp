@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import sys
 
-from youtube_context_mcp import server, transcripts
+from youtube_context_mcp import metadata, server, transcripts
 
 
 def test_tools_registered():
     names = {tool.name for tool in server.mcp._tool_manager.list_tools()}
-    assert names == {"get_transcript", "list_transcripts"}
+    assert names == {"get_transcript", "list_transcripts", "get_video_metadata"}
 
 
 def test_get_transcript_tool_delegates(monkeypatch):
@@ -40,6 +40,30 @@ def test_list_transcripts_tool_delegates(monkeypatch):
     expected = {"transcripts": [], "translation_languages": []}
     monkeypatch.setattr(transcripts, "list_transcripts", lambda video: expected)
     assert server.list_transcripts("vid") == expected
+
+
+def test_get_video_metadata_tool_delegates(monkeypatch):
+    captured = {}
+
+    def fake(video, include_description):
+        captured["args"] = (video, include_description)
+        return {"video_id": video}
+
+    monkeypatch.setattr(metadata, "get_video_metadata", fake)
+    out = server.get_video_metadata("vid", include_description=True)
+    assert out == {"video_id": "vid"}
+    assert captured["args"] == ("vid", True)
+
+
+def test_get_video_metadata_tool_default(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(
+        metadata,
+        "get_video_metadata",
+        lambda *args: captured.setdefault("args", args) or {},
+    )
+    server.get_video_metadata("vid")
+    assert captured["args"] == ("vid", False)
 
 
 def test_main_defaults_to_stdio(monkeypatch):
