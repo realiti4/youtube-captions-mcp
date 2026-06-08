@@ -44,7 +44,7 @@ Or, in Claude Code:
 claude mcp add youtube-captions -- uvx youtube-captions-mcp
 ```
 
-### Running over HTTP (e.g. LM Studio on Windows + WSL2)
+### Running over HTTP
 
 By default the server talks **stdio** (the client launches it). If your client runs on a
 different host — for example LM Studio on Windows while this server runs in WSL2 — run it as a
