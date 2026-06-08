@@ -16,7 +16,7 @@ fetching. This project just exposes them as three MCP tools.
 Run it on demand with [uv](https://docs.astral.sh/uv/) (no install needed):
 
 ```bash
-uvx youtube-context-mcp
+uvx youtube-context-mcp@latest
 ```
 
 Or install it:
@@ -34,7 +34,7 @@ Add it to your MCP client config:
   "mcpServers": {
     "youtube-context": {
       "command": "uvx",
-      "args": ["youtube-context-mcp"]
+      "args": ["youtube-context-mcp@latest"]
     }
   }
 }
@@ -43,7 +43,7 @@ Add it to your MCP client config:
 Or, in Claude Code:
 
 ```bash
-claude mcp add youtube-context -- uvx youtube-context-mcp
+claude mcp add youtube-context -- uvx youtube-context-mcp@latest
 ```
 
 ### Running over HTTP
