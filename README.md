@@ -1,12 +1,13 @@
 # youtube-context-mcp
 
-A small [MCP](https://modelcontextprotocol.io) server that gives agents context about a
-YouTube video — its transcript (to ask questions, summarize, or pull quotes) and its metadata
-(title, channel, upload date, duration, view/like counts, chapters, tags).
+A small [MCP](https://modelcontextprotocol.io) server that gives agents rich context about a
+YouTube video — its transcript and timestamped segments, jump-to-the-moment deep links, and
+metadata (title, channel, upload date, duration, view/like counts, chapters, tags) — so they can
+answer questions, summarize, pull quotes, or point you to exactly where something is said.
 
-It's a thin wrapper around [`youtube-transcript-api`](https://github.com/jdepoix/youtube-transcript-api)
+It builds on [`youtube-transcript-api`](https://github.com/jdepoix/youtube-transcript-api)
 (transcripts) and [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) (metadata), which do the actual
-fetching. This project just exposes them as three MCP tools.
+fetching, and shapes them into a focused set of MCP tools designed for agents.
 
 > Transcripts are a video's **existing captions/subtitles** — it does **not** transcribe audio
 > (no Whisper/ASR). Videos without captions have no transcript to return.
@@ -73,6 +74,8 @@ Then add it by URL:
 | Tool | What it does |
 | --- | --- |
 | `get_transcript(video, languages=["en"], include_timestamps=False, translate_to=None)` | Returns the transcript as text. `video` is a URL or 11-char ID. Set `include_timestamps` for `[mm:ss]` / `[h:mm:ss]` lines; `translate_to` for an ISO language code. |
+| `get_transcript_segments(video, languages=["en"], translate_to=None)` | Returns the transcript as structured `{start, duration, text}` segments (exact float `start` in seconds) instead of flattened text. Use it when you need timestamps to work with — e.g. feed a segment's `start` into `build_video_link`. |
+| `build_video_link(video, start)` | Builds a `watch?v=…&t=<seconds>` URL that opens the video at a moment, so a user can click straight to it. `start` is seconds or a `"mm:ss"` / `"h:mm:ss"` string. Pairs with `get_transcript_segments` to turn "where is X mentioned?" into a clickable link. |
 | `list_transcripts(video)` | Lists available transcripts (language, code, manual vs auto-generated, translatable) plus the translation targets. Use it when `get_transcript` can't find your language. |
 | `get_video_metadata(video, include_description=False)` | Returns the video's title, channel, upload date, duration, view/like counts, chapters and tags. `video` is a URL or 11-char ID. Set `include_description=True` to also include the (often long) description. Use it to answer "what's this video / who made it?" without fetching the transcript. |
 
@@ -115,4 +118,4 @@ MIT
 
 Transcript fetching is done by [`youtube-transcript-api`](https://github.com/jdepoix/youtube-transcript-api)
 by Jonas Depoix, and metadata by [`yt-dlp`](https://github.com/yt-dlp/yt-dlp). This project is
-just an MCP adapter on top of them.
+the MCP adapter that wires them together for agents.

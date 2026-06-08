@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Sequence
+from typing import TypedDict
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -39,6 +40,12 @@ _PATH_PREFIXES = {"embed", "shorts", "live", "v"}
 
 class TranscriptError(Exception):
     """A user-facing error describing why a transcript could not be retrieved."""
+
+
+class TranscriptSegment(TypedDict):
+    start: float  # seconds from the start of the video
+    duration: float  # seconds the segment is shown for
+    text: str
 
 
 class _TimeoutSession(requests.Session):
@@ -126,6 +133,28 @@ def _format_transcript(snippets, include_timestamps: bool) -> str:
     return " ".join(snippet.text.replace("\n", " ") for snippet in snippets).strip()
 
 
+def _fetch_snippets(
+    video: str,
+    languages: Sequence[str],
+    translate_to: str | None,
+):
+    """Fetch the raw transcript snippets, mapping any library error to a ``TranscriptError``.
+
+    Shared by :func:`get_transcript` and :func:`get_transcript_segments` so the fetch / translate /
+    error-mapping path lives in exactly one place.
+    """
+    video_id = extract_video_id(video)
+    languages = list(languages) or ["en"]
+    api = _build_api()
+    try:
+        if translate_to:
+            transcript = api.list(video_id).find_transcript(languages)
+            return transcript.translate(translate_to).fetch()
+        return api.fetch(video_id, languages=languages)
+    except Exception as exc:  # noqa: BLE001 - re-raised as a friendly TranscriptError
+        raise _map_error(exc, requested_languages=languages, translate_to=translate_to) from exc
+
+
 def get_transcript(
     video: str,
     languages: Sequence[str] = ("en",),
@@ -143,18 +172,30 @@ def get_transcript(
     Raises:
         TranscriptError: with a user-facing message if the transcript can't be retrieved.
     """
-    video_id = extract_video_id(video)
-    languages = list(languages) or ["en"]
-    api = _build_api()
-    try:
-        if translate_to:
-            transcript = api.list(video_id).find_transcript(languages)
-            fetched = transcript.translate(translate_to).fetch()
-        else:
-            fetched = api.fetch(video_id, languages=languages)
-    except Exception as exc:  # noqa: BLE001 - re-raised as a friendly TranscriptError
-        raise _map_error(exc, requested_languages=languages, translate_to=translate_to) from exc
-    return _format_transcript(fetched, include_timestamps)
+    snippets = _fetch_snippets(video, languages, translate_to)
+    return _format_transcript(snippets, include_timestamps)
+
+
+def get_transcript_segments(
+    video: str,
+    languages: Sequence[str] = ("en",),
+    translate_to: str | None = None,
+) -> list[TranscriptSegment]:
+    """Fetch a video's transcript as structured ``{start, duration, text}`` segments.
+
+    Unlike :func:`get_transcript` (which flattens to text), this preserves each snippet's exact
+    float ``start``, which feeds straight into ``build_video_link`` with no timestamp re-parsing.
+
+    Args:
+        video: A YouTube URL or 11-character video ID.
+        languages: Preferred language codes in priority order.
+        translate_to: Optional ISO language code to translate the transcript into.
+
+    Raises:
+        TranscriptError: with a user-facing message if the transcript can't be retrieved.
+    """
+    snippets = _fetch_snippets(video, languages, translate_to)
+    return [TranscriptSegment(start=s.start, duration=s.duration, text=s.text) for s in snippets]
 
 
 def list_transcripts(video: str) -> dict:
