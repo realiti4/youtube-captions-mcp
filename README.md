@@ -44,6 +44,28 @@ Or, in Claude Code:
 claude mcp add yt-transcript -- uvx yt-transcript-mcp
 ```
 
+### Running over HTTP (e.g. LM Studio on Windows + WSL2)
+
+By default the server talks **stdio** (the client launches it). If your client runs on a
+different host — for example LM Studio on Windows while this server runs in WSL2 — run it as a
+long-lived HTTP server instead and point the client at a URL:
+
+```bash
+yt-transcript-mcp --transport http --host 0.0.0.0 --port 8000
+```
+
+Then add it by URL:
+
+```json
+{
+  "mcpServers": {
+    "yt-transcript": { "url": "http://localhost:8000/mcp" }
+  }
+}
+```
+
+(`--host 0.0.0.0` makes it reachable from the Windows side; WSL2 forwards `localhost`.)
+
 ## Tools
 
 | Tool | What it does |

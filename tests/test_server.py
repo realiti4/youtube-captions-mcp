@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 from yt_transcript_mcp import server, transcripts
 
 
@@ -38,3 +40,29 @@ def test_list_transcripts_tool_delegates(monkeypatch):
     expected = {"transcripts": [], "translation_languages": []}
     monkeypatch.setattr(transcripts, "list_transcripts", lambda video: expected)
     assert server.list_transcripts("vid") == expected
+
+
+def test_main_defaults_to_stdio(monkeypatch):
+    calls = {}
+    monkeypatch.setattr(server.mcp, "run", lambda **kwargs: calls.setdefault("kwargs", kwargs))
+    monkeypatch.setattr(sys, "argv", ["yt-transcript-mcp"])
+    server.main()
+    assert calls["kwargs"] == {}
+
+
+def test_main_http_sets_transport_and_binding(monkeypatch):
+    original = (server.mcp.settings.host, server.mcp.settings.port)
+    calls = {}
+    monkeypatch.setattr(server.mcp, "run", lambda **kwargs: calls.setdefault("kwargs", kwargs))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["yt-transcript-mcp", "--transport", "http", "--host", "0.0.0.0", "--port", "9000"],
+    )
+    try:
+        server.main()
+        assert calls["kwargs"] == {"transport": "streamable-http"}
+        assert server.mcp.settings.host == "0.0.0.0"
+        assert server.mcp.settings.port == 9000
+    finally:
+        server.mcp.settings.host, server.mcp.settings.port = original
