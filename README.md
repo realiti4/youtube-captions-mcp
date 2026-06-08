@@ -1,9 +1,10 @@
 # youtube-context-mcp
 
 A small [MCP](https://modelcontextprotocol.io) server that gives agents rich context about a
-YouTube video — its transcript (plain or timestamped), jump-to-the-moment deep links, and
-metadata (title, channel, upload date, duration, view/like counts, chapters, tags) — so they can
-answer questions, summarize, pull quotes, or point you to exactly where something is said.
+YouTube video — its transcript (plain or timestamped), jump-to-the-moment deep links,
+metadata (title, channel, upload date, duration, view/like counts, chapters, tags), and the
+most-replayed moments (where viewers rewatch most) — so they can answer questions, summarize,
+pull quotes, surface highlights, or point you to exactly where something is said.
 
 It builds on [`youtube-transcript-api`](https://github.com/jdepoix/youtube-transcript-api)
 (transcripts) and [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) (metadata), which do the actual
@@ -77,6 +78,7 @@ Then add it by URL:
 | `build_video_link(video, start)` | Builds a `watch?v=…&t=<seconds>` URL that opens the video at a moment, so a user can click straight to it. `start` is seconds or a `"mm:ss"` / `"h:mm:ss"` string. Pairs with `get_transcript(include_timestamps=True)` to turn "where is X mentioned?" into a clickable link. |
 | `list_transcripts(video)` | Lists available transcripts (language, code, manual vs auto-generated, translatable) plus the translation targets. Use it when `get_transcript` can't find your language. |
 | `get_video_metadata(video, include_description=False)` | Returns the video's title, channel, upload date, duration, view/like counts, chapters and tags. `video` is a URL or 11-char ID. Set `include_description=True` to also include the (often long) description. Use it to answer "what's this video / who made it?" without fetching the transcript. |
+| `get_most_replayed(video, top_n=5)` | Returns the video's **most-replayed moments** (YouTube's viewer-interest heatmap) as up to `top_n` high-interest regions — each with a `peak_label`/`region_label` (mm:ss), a clickable jump `url`, the chapter it falls in, and a `relative_intensity` (0–1 within the video, 1.0 = its single most-rewatched moment — not a view count). Use it for "what are the best parts?" or to weight a summary by what viewers actually rewatch. `has_data` is `false` when YouTube has no heatmap (common for newer/low-traffic videos and some Shorts). |
 
 ## Proxies (optional)
 

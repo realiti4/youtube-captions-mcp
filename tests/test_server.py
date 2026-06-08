@@ -14,6 +14,7 @@ def test_tools_registered():
         "build_video_link",
         "list_transcripts",
         "get_video_metadata",
+        "get_most_replayed",
     }
 
 
@@ -81,6 +82,30 @@ def test_get_video_metadata_tool_default(monkeypatch):
     )
     server.get_video_metadata("vid")
     assert captured["args"] == ("vid", False)
+
+
+def test_get_most_replayed_tool_delegates(monkeypatch):
+    captured = {}
+
+    def fake(video, top_n):
+        captured["args"] = (video, top_n)
+        return {"video_id": video, "has_data": True}
+
+    monkeypatch.setattr(metadata, "get_most_replayed", fake)
+    out = server.get_most_replayed("vid", top_n=3)
+    assert out == {"video_id": "vid", "has_data": True}
+    assert captured["args"] == ("vid", 3)
+
+
+def test_get_most_replayed_tool_default(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(
+        metadata,
+        "get_most_replayed",
+        lambda *args: captured.setdefault("args", args) or {},
+    )
+    server.get_most_replayed("vid")
+    assert captured["args"] == ("vid", 5)
 
 
 def test_main_defaults_to_stdio(monkeypatch):
