@@ -1,4 +1,4 @@
-"""A small MCP server for YouTube transcripts, wrapping youtube-transcript-api."""
+"""A small MCP server giving agents YouTube video context: transcripts and metadata."""
 
 from importlib.metadata import version
 

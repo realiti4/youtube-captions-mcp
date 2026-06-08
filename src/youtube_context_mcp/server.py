@@ -7,7 +7,7 @@ from typing import TypedDict
 
 from mcp.server.fastmcp import FastMCP
 
-from youtube_context_mcp import transcripts
+from youtube_context_mcp import metadata, transcripts
 
 mcp = FastMCP("youtube-context")
 
@@ -70,6 +70,22 @@ def list_transcripts(video: str) -> TranscriptListing:
         video: A YouTube URL or an 11-character video ID.
     """
     return transcripts.list_transcripts(video)
+
+
+@mcp.tool()
+def get_video_metadata(video: str, include_description: bool = False) -> metadata.VideoMetadata:
+    """Get a YouTube video's metadata: title, channel, upload date, duration, view/like counts,
+    chapters and tags.
+
+    Use this to answer questions about a video (its name, who made it, how long it is, when it
+    came out) without fetching its transcript.
+
+    Args:
+        video: A YouTube URL (watch, youtu.be, shorts, embed, live) or an 11-character video ID.
+        include_description: If true, also return the (often long) description; otherwise it's
+            omitted to keep the response small.
+    """
+    return metadata.get_video_metadata(video, include_description)
 
 
 def main() -> None:

@@ -41,3 +41,19 @@ def build_proxy_config() -> ProxyConfig | None:
         return GenericProxyConfig(http_url=http_proxy, https_url=https_proxy)
 
     return None
+
+
+def build_proxy_url() -> str | None:
+    """Return a single proxy URL (or ``None``) for libraries that take one, e.g. yt-dlp.
+
+    Derived from :func:`build_proxy_config` so the same env vars apply, including the Webshare
+    rotating-residential encoding and ``WEBSHARE_PROXY_LOCATIONS``. We prefer the HTTPS proxy
+    because YouTube traffic is HTTPS, falling back to the HTTP one.
+
+    The returned URL may embed credentials, so never log it or surface it in error messages.
+    """
+    config = build_proxy_config()
+    if config is None:
+        return None
+    proxies = config.to_requests_dict()
+    return proxies.get("https") or proxies.get("http")

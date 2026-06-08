@@ -1,17 +1,18 @@
 [project]
 name = "youtube-context-mcp"
-version = "0.2.0"
-description = "A small MCP server for fetching YouTube video transcripts, wrapping youtube-transcript-api"
+version = "0.3.0"
+description = "A small MCP server giving agents YouTube video context: transcripts and metadata"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "mcp>=1.12",
     "youtube-transcript-api>=1.2.4,<2",
     "requests>=2.32",
+    "yt-dlp>=2025.1",
 ]
 authors = [{name = "Onur Cetinkol", email = "onurcetinkol@gmail.com"}]
 license = {text = "MIT"}
-keywords = ["youtube", "transcript", "mcp", "model-context-protocol", "subtitles"]
+keywords = ["youtube", "transcript", "metadata", "mcp", "model-context-protocol", "subtitles"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",

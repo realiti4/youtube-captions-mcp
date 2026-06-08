@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from youtube_transcript_api.proxies import GenericProxyConfig, WebshareProxyConfig
 
-from youtube_context_mcp.proxies import build_proxy_config
+from youtube_context_mcp.proxies import build_proxy_config, build_proxy_url
 
 PROXY_ENV = [
     "WEBSHARE_PROXY_USERNAME",
@@ -53,3 +53,26 @@ def test_generic_http_proxy(monkeypatch):
 def test_generic_https_proxy(monkeypatch):
     monkeypatch.setenv("YT_TRANSCRIPT_HTTPS_PROXY", "https://proxy:8443")
     assert isinstance(build_proxy_config(), GenericProxyConfig)
+
+
+# ---- build_proxy_url (single URL string for yt-dlp) ----
+
+
+def test_build_proxy_url_none():
+    assert build_proxy_url() is None
+
+
+def test_build_proxy_url_generic(monkeypatch):
+    monkeypatch.setenv("YT_TRANSCRIPT_HTTPS_PROXY", "https://proxy:8443")
+    assert build_proxy_url() == "https://proxy:8443"
+
+
+def test_build_proxy_url_webshare_honors_locations(monkeypatch):
+    monkeypatch.setenv("WEBSHARE_PROXY_USERNAME", "user")
+    monkeypatch.setenv("WEBSHARE_PROXY_PASSWORD", "pass")
+    monkeypatch.setenv("WEBSHARE_PROXY_LOCATIONS", "us,de")
+    url = build_proxy_url()
+    assert url is not None
+    assert "p.webshare.io" in url
+    assert "US-DE" in url  # locations encoded into the rotating username
+    assert "rotate" in url

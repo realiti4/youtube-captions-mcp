@@ -1,13 +1,15 @@
 # youtube-context-mcp
 
-A small [MCP](https://modelcontextprotocol.io) server that lets agents read YouTube video
-transcripts so you can ask questions about a video, summarize it, or pull quotes.
+A small [MCP](https://modelcontextprotocol.io) server that gives agents context about a
+YouTube video — its transcript (to ask questions, summarize, or pull quotes) and its metadata
+(title, channel, upload date, duration, view/like counts, chapters, tags).
 
-It's a thin wrapper around [`youtube-transcript-api`](https://github.com/jdepoix/youtube-transcript-api),
-which does all the actual fetching. This project just exposes it as two MCP tools.
+It's a thin wrapper around [`youtube-transcript-api`](https://github.com/jdepoix/youtube-transcript-api)
+(transcripts) and [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) (metadata), which do the actual
+fetching. This project just exposes them as three MCP tools.
 
-> It returns a video's **existing captions/subtitles** — it does **not** transcribe audio
-> (no Whisper/ASR). Videos without captions have nothing to return.
+> Transcripts are a video's **existing captions/subtitles** — it does **not** transcribe audio
+> (no Whisper/ASR). Videos without captions have no transcript to return.
 
 ## Install
 
@@ -72,11 +74,14 @@ Then add it by URL:
 | --- | --- |
 | `get_transcript(video, languages=["en"], include_timestamps=False, translate_to=None)` | Returns the transcript as text. `video` is a URL or 11-char ID. Set `include_timestamps` for `[mm:ss]` / `[h:mm:ss]` lines; `translate_to` for an ISO language code. |
 | `list_transcripts(video)` | Lists available transcripts (language, code, manual vs auto-generated, translatable) plus the translation targets. Use it when `get_transcript` can't find your language. |
+| `get_video_metadata(video, include_description=False)` | Returns the video's title, channel, upload date, duration, view/like counts, chapters and tags. `video` is a URL or 11-char ID. Set `include_description=True` to also include the (often long) description. Use it to answer "what's this video / who made it?" without fetching the transcript. |
 
 ## Proxies (optional)
 
 YouTube blocks most datacenter/cloud IPs, so on a server you may hit `RequestBlocked` /
-`IpBlocked`. Locally this is rarely needed. To route requests through a proxy, set env vars:
+`IpBlocked` (transcripts) or a "Sign in to confirm you're not a bot" block (metadata). Locally
+this is rarely needed. The same env vars route both transcript and metadata requests through a
+proxy:
 
 | Env var | Purpose |
 | --- | --- |
@@ -108,5 +113,6 @@ MIT
 
 ## Credits
 
-All transcript fetching is done by [`youtube-transcript-api`](https://github.com/jdepoix/youtube-transcript-api)
-by Jonas Depoix. This project is just an MCP adapter on top of it.
+Transcript fetching is done by [`youtube-transcript-api`](https://github.com/jdepoix/youtube-transcript-api)
+by Jonas Depoix, and metadata by [`yt-dlp`](https://github.com/yt-dlp/yt-dlp). This project is
+just an MCP adapter on top of them.
