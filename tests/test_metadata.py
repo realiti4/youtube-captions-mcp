@@ -182,6 +182,7 @@ def test_most_replayed_single_peak_fields():
     assert peak["relative_intensity"] == 1.0
     assert peak["url"] == f"https://www.youtube.com/watch?v={VIDEO}&t=20"
     assert peak["chapter"] == "Hook"
+    assert peak["is_opening"] is False  # peak is mid-clip, not at t=0
 
 
 def test_most_replayed_two_regions_ordered_by_time_and_chaptered():
@@ -196,16 +197,49 @@ def test_most_replayed_two_regions_ordered_by_time_and_chaptered():
     out = _to_most_replayed(info, VIDEO, top_n=5)
     assert [p["peak_start_seconds"] for p in out["peaks"]] == [20, 70]  # sorted by time
     assert [p["chapter"] for p in out["peaks"]] == ["Intro", "Climax"]
-    # The second region merges the two adjacent above-threshold segments (70-90).
+    # The second peak's shoulder covers the adjacent 0.9/0.6 segments (70-90).
     assert out["peaks"][1]["region_label"] == "01:10-01:30"
 
 
-def test_most_replayed_top_n_clamps_count():
-    info = {"heatmap": _heatmap([1.0, 0.1, 0.9, 0.1, 0.8, 0.1, 0.7])}
+def test_most_replayed_top_n_clamps_content_count():
+    # No start spike (index 0 is a valley), so top_n caps the content peaks exactly.
+    info = {"heatmap": _heatmap([0.1, 1.0, 0.1, 0.9, 0.1, 0.8, 0.1])}
     out = _to_most_replayed(info, VIDEO, top_n=2)
     assert len(out["peaks"]) == 2
+    assert not any(p["is_opening"] for p in out["peaks"])
     # Keeps the two strongest (1.0 and 0.9), still ordered by time.
     assert [p["relative_intensity"] for p in out["peaks"]] == [1.0, 0.9]
+
+
+def test_most_replayed_flags_and_keeps_opening_beyond_top_n():
+    # Index 0 is a local-max spike -> the opening artifact. It must be flagged and appended even
+    # when top_n is already full of content peaks (flag, don't drop).
+    info = {"heatmap": _heatmap([1.0, 0.4, 0.2, 0.9, 0.2, 0.85, 0.2, 0.8, 0.2, 0.75, 0.2])}
+    out = _to_most_replayed(info, VIDEO, top_n=2)
+    peaks = out["peaks"]
+    assert [p["is_opening"] for p in peaks] == [True, False, False]  # opening kept + 2 content
+    assert peaks[0]["peak_start_seconds"] == 0
+    assert peaks[0]["relative_intensity"] == 1.0
+
+
+def test_most_replayed_surfaces_content_under_dominant_opening():
+    # Opening spike is 1.0; real content peaks sit below 0.3 of it. A fixed 0.3 floor would filter
+    # them out and return only the opening -- the adaptive (content-relative) floor must still find
+    # them, with the opening flagged and held out of the content ranking.
+    info = {"heatmap": _heatmap([1.0, 0.3, 0.2, 0.25, 0.1, 0.22, 0.1])}
+    out = _to_most_replayed(info, VIDEO, top_n=8)
+    assert [p["is_opening"] for p in out["peaks"]] == [True, False, False]
+    assert out["peaks"][0]["relative_intensity"] == 1.0  # the opening
+    # The two sub-0.3 content peaks are discovered, not filtered away.
+    assert [p["relative_intensity"] for p in out["peaks"][1:]] == [0.25, 0.22]
+
+
+def test_most_replayed_uniform_heatmap_not_flagged_opening():
+    # A flat heatmap has no t=0 spike -- its single region spans the whole video, so it must not
+    # be mislabeled as the opening artifact.
+    out = _to_most_replayed({"heatmap": _heatmap([0.5, 0.5, 0.5, 0.5, 0.5])}, VIDEO)
+    assert len(out["peaks"]) == 1
+    assert out["peaks"][0]["is_opening"] is False
 
 
 def test_most_replayed_peak_outside_chapters_has_none():
@@ -237,13 +271,13 @@ def test_most_replayed_no_data(heatmap):
 
 
 def test_most_replayed_flat_heatmap_falls_back_to_global_max():
-    # Nothing clears the 0.5 threshold -> still return the single hottest segment.
-    info = {"heatmap": _heatmap([0.2, 0.2, 0.45, 0.3, 0.1])}
+    # Nothing clears the floor -> still return the single hottest segment.
+    info = {"heatmap": _heatmap([0.2, 0.25, 0.1])}
     out = _to_most_replayed(info, VIDEO)
     assert out["has_data"] is True
     assert len(out["peaks"]) == 1
-    assert out["peaks"][0]["peak_start_seconds"] == 20
-    assert out["peaks"][0]["relative_intensity"] == 0.45
+    assert out["peaks"][0]["peak_start_seconds"] == 10
+    assert out["peaks"][0]["relative_intensity"] == 0.25
 
 
 def test_most_replayed_profile_shape_and_range():

@@ -110,7 +110,7 @@ def get_video_metadata(video: str, include_description: bool = False) -> metadat
 
 
 @mcp.tool()
-def get_most_replayed(video: str, top_n: int = 5) -> metadata.MostReplayed:
+def get_most_replayed(video: str, top_n: int = 8) -> metadata.MostReplayed:
     """Get a YouTube video's "most replayed" moments -- the peaks of its viewer-interest heatmap
     (the curve shown above the timeline marking where people rewatch most).
 
@@ -121,6 +121,10 @@ def get_most_replayed(video: str, top_n: int = 5) -> metadata.MostReplayed:
     the chapter it falls in. relative_intensity is 0..1 *within this video* (1.0 = its single
     most-rewatched moment) -- it is NOT a view count and is not comparable across videos.
 
+    A peak with is_opening=True sits at the very start (t~=0): that spot is almost always inflated
+    by playback starting there, not a genuine rewatch, so discount it as a "best part". It is
+    returned in addition to (not counted against) top_n, so the opening can't crowd out content.
+
     To say what is actually happening at a peak, read its peak_label (mm:ss) and look it up with
     get_transcript(include_timestamps=True); profile is a coarse 0..1 curve for the overall shape
     (front-loaded vs steady vs spikes near the end).
@@ -130,7 +134,8 @@ def get_most_replayed(video: str, top_n: int = 5) -> metadata.MostReplayed:
 
     Args:
         video: A YouTube URL (watch, youtu.be, shorts, embed, live) or an 11-character video ID.
-        top_n: Maximum number of peak regions to return (clamped to 1..20; default 5).
+        top_n: Max number of content peak regions (clamped to 1..20; default 8). The flagged
+            opening (t~=0) peak, when present, is returned in addition to these.
     """
     return metadata.get_most_replayed(video, top_n)
 

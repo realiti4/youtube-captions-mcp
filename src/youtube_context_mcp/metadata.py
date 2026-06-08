@@ -38,6 +38,7 @@ class MostReplayedPeak(TypedDict):
     relative_intensity: float  # 0..1 within THIS video (rounded), 1.0 = hottest moment
     url: str  # watch?v=<id>&t=<region_start> -- lands at the start of the stretch
     chapter: str | None  # title of the chapter this moment falls in, if any
+    is_opening: bool  # peak sits at t~=0 -- usually a playback-start artifact, not a rewatch
 
 
 class MostReplayed(TypedDict):
@@ -113,7 +114,7 @@ def get_video_metadata(video: str, include_description: bool = False) -> VideoMe
     return _to_metadata(info, video_id, include_description)
 
 
-def get_most_replayed(video: str, top_n: int = 5) -> MostReplayed:
+def get_most_replayed(video: str, top_n: int = 8) -> MostReplayed:
     """Fetch a video's "most replayed" peaks (YouTube's heatmap).
 
     Args:
@@ -176,10 +177,16 @@ def _to_metadata(info: dict, video_id: str, include_description: bool = False) -
     )
 
 
-# A heatmap segment counts as "hot" at or above this fraction of the per-video peak (which is
-# normalised to 1.0). Tunable: too low merges everything into one region, too high drops real
-# peaks. 0.5 is a reasonable v1 default; see ROADMAP for a possible local-maxima refinement.
-_HEATMAP_THRESHOLD = 0.5
+# Absolute floor: segments below this are flat dead air, never a peak regardless of the rest.
+_MIN_INTENSITY = 0.05
+# Content discovery floor, as a fraction of the strongest *non-opening* peak. Adaptive (not a
+# fixed cut against the YouTube-normalised values) so a dominant opening spike normalised to 1.0
+# doesn't filter out genuinely-popular but lower content peaks below it.
+_CONTENT_FLOOR_RATIO = 0.4
+# Don't report two peaks closer together than this fraction of the timeline; keeps distinct
+# popular moments separate instead of collapsing a long hot stretch into one blob. Expressed as a
+# share of the heatmap (duration-independent) so long videos space peaks further apart in time.
+_PEAK_MIN_GAP_FRACTION = 0.04
 _PROFILE_BUCKETS = 12
 
 
@@ -214,7 +221,51 @@ def _downsample_profile(values: list[float], buckets: int) -> list[float]:
     return profile
 
 
-def _to_most_replayed(info: dict, video_id: str, top_n: int = 5) -> MostReplayed:
+def _local_maxima(values: list[float]) -> list[int]:
+    """Indices that are local maxima (strictly above the left neighbour, >= the right), so a
+    smooth slope or decay doesn't fabricate peaks and a flat plateau collapses to its left edge.
+    A monotonic fall yields only its start. Returned in ascending index order."""
+    n = len(values)
+
+    def is_max(i: int) -> bool:
+        left_ok = i == 0 or values[i] > values[i - 1]
+        right_ok = i == n - 1 or values[i] >= values[i + 1]
+        return left_ok and right_ok
+
+    return [i for i in range(n) if is_max(i)]
+
+
+def _suppress(candidates: list[int], values: list[float], min_gap: int) -> list[int]:
+    """Non-maximum suppression: walk candidates strongest-first, keeping one only if it's at least
+    ``min_gap`` from every peak already kept. Returned strongest-first."""
+    chosen: list[int] = []
+    for i in sorted(candidates, key=values.__getitem__, reverse=True):
+        if all(abs(i - j) >= min_gap for j in chosen):
+            chosen.append(i)
+    return chosen
+
+
+def _peak_region(values: list[float], peak: int, others: list[int]) -> tuple[int, int]:
+    """Expand a peak left/right over its shoulder -- contiguous segments above the larger of the
+    minimum intensity and 60% of the peak. Clamped to the midpoint toward each neighbouring peak
+    so adjacent regions tile instead of overlapping."""
+    left_bound, right_bound = 0, len(values) - 1
+    for j in others:
+        if j < peak:
+            left_bound = max(left_bound, (j + peak) // 2 + 1)
+        elif j > peak:
+            right_bound = min(right_bound, (j + peak) // 2)
+    shoulder = max(_MIN_INTENSITY, values[peak] * 0.6)
+    lo = peak
+    while lo - 1 >= left_bound and values[lo - 1] >= shoulder:
+        lo -= 1
+    hi = peak
+    while hi + 1 <= right_bound and values[hi + 1] >= shoulder:
+        hi += 1
+    return lo, hi
+
+
+def _to_most_replayed(info: dict, video_id: str, top_n: int = 8) -> MostReplayed:
     """Map yt-dlp's ``heatmap`` (~100 equal-width ``{start_time, end_time, value}`` segments,
     value normalised 0..1) to a small set of agent-actionable peak regions plus a coarse profile.
 
@@ -238,37 +289,30 @@ def _to_most_replayed(info: dict, video_id: str, top_n: int = 5) -> MostReplayed
     top_n = max(1, min(int(top_n), 20))
     values = [float(s.get("value") or 0.0) for s in segments]
 
-    # Hot regions: maximal runs of consecutive segments at or above the threshold.
-    regions: list[tuple[int, int]] = []  # (first_index, last_index), inclusive
-    run_start: int | None = None
-    for i, value in enumerate(values):
-        if value >= _HEATMAP_THRESHOLD:
-            if run_start is None:
-                run_start = i
-        elif run_start is not None:
-            regions.append((run_start, i - 1))
-            run_start = None
-    if run_start is not None:
-        regions.append((run_start, len(values) - 1))
+    maxima = _local_maxima(values)
+    if not maxima:  # genuinely flat: still surface the single hottest moment
+        maxima = [max(range(len(values)), key=values.__getitem__)]
 
-    # Flat heatmap (nothing clears the bar): fall back to the single hottest segment so we still
-    # return the top moment when data exists.
-    if not regions:
-        peak_i = max(range(len(values)), key=values.__getitem__)
-        regions = [(peak_i, peak_i)]
+    # The opening (t~=0) playback-start artifact: a local max at the very first segment. Identify
+    # it first and hold it out of content discovery so it can't define the baseline everyone else
+    # is measured against.
+    opening_idx = maxima[0] if maxima[0] == 0 and values[0] >= _MIN_INTENSITY else None
 
-    def peak_index(region: tuple[int, int]) -> int:
-        lo, hi = region
-        return max(range(lo, hi + 1), key=values.__getitem__)
+    # Discover content peaks relative to the strongest *non-opening* peak, so a dominant opening
+    # doesn't filter real content out before ranking.
+    content_maxima = [i for i in maxima if i != opening_idx]
+    content_max = max((values[i] for i in content_maxima), default=0.0)
+    floor = max(_MIN_INTENSITY, content_max * _CONTENT_FLOOR_RATIO)
+    content_candidates = [i for i in content_maxima if values[i] >= floor]
 
-    # Rank by peak intensity, keep the strongest top_n, then order by time for readable output.
-    regions.sort(key=lambda r: values[peak_index(r)], reverse=True)
-    regions = regions[:top_n]
-    regions.sort(key=lambda r: r[0])
+    min_gap = max(1, round(len(values) * _PEAK_MIN_GAP_FRACTION))
+    chosen = _suppress(content_candidates, values, min_gap)[:top_n]
+    if opening_idx is not None:
+        chosen.append(opening_idx)  # always kept (flagged), never crowds out content
 
     peaks: list[MostReplayedPeak] = []
-    for lo, hi in regions:
-        pi = peak_index((lo, hi))
+    for pi in chosen:
+        lo, hi = _peak_region(values, pi, chosen)
         region_start = float(segments[lo].get("start_time") or 0.0)
         region_end = float(segments[hi].get("end_time") or region_start)
         peak_start = float(segments[pi].get("start_time") or region_start)
@@ -288,8 +332,13 @@ def _to_most_replayed(info: dict, video_id: str, top_n: int = 5) -> MostReplayed
                 relative_intensity=round(values[pi], 3),
                 url=links.build_video_link(video_id, region_start_seconds),
                 chapter=_chapter_at(peak_start, info),
+                # A genuine opening spike drops off; a region spanning the whole timeline is just
+                # uniform interest, not a t=0 artifact, so don't flag it.
+                is_opening=pi == opening_idx and not (lo == 0 and hi == len(values) - 1),
             )
         )
+
+    peaks.sort(key=lambda p: p["region_start_seconds"])  # readable, jump-in-sequence order
 
     return MostReplayed(
         video_id=video_id,

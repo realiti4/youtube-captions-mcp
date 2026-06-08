@@ -105,7 +105,7 @@ def test_get_most_replayed_tool_default(monkeypatch):
         lambda *args: captured.setdefault("args", args) or {},
     )
     server.get_most_replayed("vid")
-    assert captured["args"] == ("vid", 5)
+    assert captured["args"] == ("vid", 8)
 
 
 def test_main_defaults_to_stdio(monkeypatch):
