@@ -7,7 +7,7 @@ from typing import TypedDict
 
 from mcp.server.fastmcp import FastMCP
 
-from youtube_context_mcp import metadata, transcripts
+from youtube_context_mcp import links, metadata, transcripts
 
 mcp = FastMCP("youtube-context")
 
@@ -56,6 +56,50 @@ def get_transcript(
         include_timestamps,
         translate_to,
     )
+
+
+@mcp.tool()
+def get_transcript_segments(
+    video: str,
+    languages: list[str] | None = None,
+    translate_to: str | None = None,
+) -> list[transcripts.TranscriptSegment]:
+    """Fetch a YouTube video's captions as structured {start, duration, text} segments.
+
+    Like get_transcript, but instead of flattened text it returns each caption snippet with its
+    exact start time (seconds) and duration. Use this when you need timestamps to work with --
+    e.g. feed a segment's start straight into build_video_link to make a "jump to this moment"
+    link. For plain reading/summarizing, get_transcript is usually enough.
+
+    Args:
+        video: A YouTube URL (watch, youtu.be, shorts, embed, live) or an 11-character video ID.
+        languages: Preferred language codes in priority order. Defaults to ["en"].
+        translate_to: Optional ISO language code to translate the transcript into.
+    """
+    return transcripts.get_transcript_segments(
+        video,
+        tuple(languages) if languages else ("en",),
+        translate_to,
+    )
+
+
+@mcp.tool(structured_output=False)
+def build_video_link(video: str, start: int | float | str) -> str:
+    """Build a YouTube link that opens a video at a specific moment.
+
+    Returns a watch URL like https://www.youtube.com/watch?v=<id>&t=<seconds> so a user can click
+    straight to the moment something is discussed. Pair it with get_transcript_segments (or
+    get_transcript with include_timestamps=True) to turn "where is X mentioned?" into a clickable
+    link.
+
+    Args:
+        video: A YouTube URL (watch, youtu.be, shorts, embed, live) or an 11-character video ID.
+        start: The moment to jump to -- seconds (e.g. 90) or a "mm:ss" / "h:mm:ss" string.
+
+    Returns:
+        The watch URL as a string.
+    """
+    return links.build_video_link(video, start)
 
 
 @mcp.tool()
