@@ -2,8 +2,8 @@
 
 Pure string construction with no network access: given a video and a start time, produce a
 shareable watch URL that opens the video at that moment. Composes with
-``get_transcript(include_timestamps=True)`` / ``get_transcript_segments`` -- the agent finds where
-topic X is discussed and turns the ``start`` into a clickable link.
+``get_transcript(include_timestamps=True)`` -- the agent finds where topic X is discussed (reads
+the ``[mm:ss]`` of the relevant block) and turns it into a clickable link.
 
 Kept free of any MCP concerns so it can be unit-tested in isolation.
 """

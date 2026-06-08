@@ -1,7 +1,7 @@
 # youtube-context-mcp
 
 A small [MCP](https://modelcontextprotocol.io) server that gives agents rich context about a
-YouTube video — its transcript and timestamped segments, jump-to-the-moment deep links, and
+YouTube video — its transcript (plain or timestamped), jump-to-the-moment deep links, and
 metadata (title, channel, upload date, duration, view/like counts, chapters, tags) — so they can
 answer questions, summarize, pull quotes, or point you to exactly where something is said.
 
@@ -73,9 +73,8 @@ Then add it by URL:
 
 | Tool | What it does |
 | --- | --- |
-| `get_transcript(video, languages=["en"], include_timestamps=False, translate_to=None)` | Returns the transcript as text. `video` is a URL or 11-char ID. Set `include_timestamps` for `[mm:ss]` / `[h:mm:ss]` lines; `translate_to` for an ISO language code. |
-| `get_transcript_segments(video, languages=["en"], translate_to=None)` | Returns the transcript as structured `{start, text}` segments (exact float `start` in seconds) instead of flattened text. Use it when you need timestamps to work with — e.g. feed a segment's `start` into `build_video_link`. Heavier on tokens than `get_transcript`, so prefer the latter for plain reading. |
-| `build_video_link(video, start)` | Builds a `watch?v=…&t=<seconds>` URL that opens the video at a moment, so a user can click straight to it. `start` is seconds or a `"mm:ss"` / `"h:mm:ss"` string. Pairs with `get_transcript_segments` to turn "where is X mentioned?" into a clickable link. |
+| `get_transcript(video, languages=["en"], include_timestamps=False, translate_to=None)` | Returns the transcript as text. `video` is a URL or 11-char ID. Set `include_timestamps` to group it into ~15s `[mm:ss]` blocks (handy for locating a topic and building a link); `translate_to` for an ISO language code. |
+| `build_video_link(video, start)` | Builds a `watch?v=…&t=<seconds>` URL that opens the video at a moment, so a user can click straight to it. `start` is seconds or a `"mm:ss"` / `"h:mm:ss"` string. Pairs with `get_transcript(include_timestamps=True)` to turn "where is X mentioned?" into a clickable link. |
 | `list_transcripts(video)` | Lists available transcripts (language, code, manual vs auto-generated, translatable) plus the translation targets. Use it when `get_transcript` can't find your language. |
 | `get_video_metadata(video, include_description=False)` | Returns the video's title, channel, upload date, duration, view/like counts, chapters and tags. `video` is a URL or 11-char ID. Set `include_description=True` to also include the (often long) description. Use it to answer "what's this video / who made it?" without fetching the transcript. |
 

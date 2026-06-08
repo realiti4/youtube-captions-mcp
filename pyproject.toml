@@ -1,7 +1,7 @@
 [project]
 name = "youtube-context-mcp"
-version = "0.4.1"
-description = "A small MCP server giving agents YouTube video context: transcripts, timestamped segments, deep links, and metadata"
+version = "0.4.2"
+description = "A small MCP server giving agents YouTube video context: transcripts, deep links, and metadata"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

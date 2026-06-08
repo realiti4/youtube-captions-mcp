@@ -124,11 +124,39 @@ def _format_timestamp(seconds: float) -> str:
     return f"{minutes:02d}:{secs:02d}"
 
 
+# Captions are tiny (~1-3s) fragments; grouping them into coarser blocks keeps the timestamped
+# form cheap on tokens while staying precise enough to jump to where a topic starts.
+_CHUNK_SECONDS = 15.0
+
+
+def _format_chunked(snippets) -> str:
+    """Group snippets into ~``_CHUNK_SECONDS`` blocks, one ``[mm:ss] text`` line each.
+
+    Each block is timestamped with its first snippet's start, so the line composes directly with
+    ``build_video_link`` (which accepts ``"mm:ss"``).
+    """
+    lines: list[str] = []
+    block_start: float | None = None
+    block_parts: list[str] = []
+    for snippet in snippets:
+        text = snippet.text.replace("\n", " ").strip()
+        if not text:
+            continue
+        if block_start is not None and snippet.start - block_start >= _CHUNK_SECONDS:
+            lines.append(f"[{_format_timestamp(block_start)}] {' '.join(block_parts)}")
+            block_start = None
+            block_parts = []
+        if block_start is None:
+            block_start = snippet.start
+        block_parts.append(text)
+    if block_parts:
+        lines.append(f"[{_format_timestamp(block_start)}] {' '.join(block_parts)}")
+    return "\n".join(lines)
+
+
 def _format_transcript(snippets, include_timestamps: bool) -> str:
     if include_timestamps:
-        return "\n".join(
-            f"[{_format_timestamp(snippet.start)}] {snippet.text}" for snippet in snippets
-        )
+        return _format_chunked(snippets)
     return " ".join(snippet.text.replace("\n", " ") for snippet in snippets).strip()
 
 
@@ -165,7 +193,8 @@ def get_transcript(
     Args:
         video: A YouTube URL or 11-character video ID.
         languages: Preferred language codes in priority order.
-        include_timestamps: Prefix each line with ``[mm:ss]`` / ``[h:mm:ss]`` when true.
+        include_timestamps: When true, group the transcript into ~15s blocks, each prefixed with
+            ``[mm:ss]`` / ``[h:mm:ss]`` -- handy for locating a topic and building a link.
         translate_to: Optional ISO language code to translate the transcript into.
 
     Raises:
@@ -181,6 +210,11 @@ def get_transcript_segments(
     translate_to: str | None = None,
 ) -> list[TranscriptSegment]:
     """Fetch a video's transcript as structured ``{start, text}`` segments.
+
+    Not exposed as an MCP tool: for agent-facing "where is X / link to it" use
+    ``get_transcript(include_timestamps=True)`` (chunked + cheap on tokens) instead. This function
+    is kept as a library building block for future *programmatic* use (e.g. an analysis tool) that
+    wants exact per-snippet data rather than text.
 
     Unlike :func:`get_transcript` (which flattens to text), this preserves each snippet's exact
     float ``start``, which feeds straight into ``build_video_link`` with no timestamp re-parsing.

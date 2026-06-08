@@ -44,7 +44,9 @@ def get_transcript(
     Args:
         video: A YouTube URL (watch, youtu.be, shorts, embed, live) or an 11-character video ID.
         languages: Preferred language codes in priority order. Defaults to ["en"].
-        include_timestamps: If true, prefix each line with [mm:ss] (or [h:mm:ss] past an hour).
+        include_timestamps: If true, group the transcript into ~15s blocks, each prefixed with
+            [mm:ss] (or [h:mm:ss] past an hour). Use this to find where a topic is discussed and
+            pass that [mm:ss] to build_video_link.
         translate_to: Optional ISO language code to translate the transcript into.
 
     Returns:
@@ -58,39 +60,14 @@ def get_transcript(
     )
 
 
-@mcp.tool()
-def get_transcript_segments(
-    video: str,
-    languages: list[str] | None = None,
-    translate_to: str | None = None,
-) -> list[transcripts.TranscriptSegment]:
-    """Fetch a YouTube video's captions as structured {start, text} segments.
-
-    Like get_transcript, but instead of flattened text it returns each caption snippet with its
-    exact start time (seconds). Use this when you need timestamps to work with -- e.g. feed a
-    segment's start straight into build_video_link to make a "jump to this moment" link. For plain
-    reading/summarizing, get_transcript is usually enough (and far cheaper on tokens).
-
-    Args:
-        video: A YouTube URL (watch, youtu.be, shorts, embed, live) or an 11-character video ID.
-        languages: Preferred language codes in priority order. Defaults to ["en"].
-        translate_to: Optional ISO language code to translate the transcript into.
-    """
-    return transcripts.get_transcript_segments(
-        video,
-        tuple(languages) if languages else ("en",),
-        translate_to,
-    )
-
-
 @mcp.tool(structured_output=False)
 def build_video_link(video: str, start: int | float | str) -> str:
     """Build a YouTube link that opens a video at a specific moment.
 
     Returns a watch URL like https://www.youtube.com/watch?v=<id>&t=<seconds> so a user can click
-    straight to the moment something is discussed. Pair it with get_transcript_segments (or
-    get_transcript with include_timestamps=True) to turn "where is X mentioned?" into a clickable
-    link.
+    straight to the moment something is discussed. Pair it with get_transcript(include_timestamps=
+    True) -- read off the [mm:ss] of the relevant block and pass it as start -- to turn "where is X
+    mentioned?" into a clickable link.
 
     Args:
         video: A YouTube URL (watch, youtu.be, shorts, embed, live) or an 11-character video ID.

@@ -11,7 +11,6 @@ def test_tools_registered():
     names = {tool.name for tool in server.mcp._tool_manager.list_tools()}
     assert names == {
         "get_transcript",
-        "get_transcript_segments",
         "build_video_link",
         "list_transcripts",
         "get_video_metadata",
@@ -40,30 +39,6 @@ def test_get_transcript_tool_uses_default_language(monkeypatch):
     )
     server.get_transcript("vid")
     assert captured["args"] == ("vid", ("en",), False, None)
-
-
-def test_get_transcript_segments_tool_delegates(monkeypatch):
-    captured = {}
-
-    def fake(video, languages, translate_to):
-        captured["args"] = (video, languages, translate_to)
-        return [{"start": 0.0, "text": "hi"}]
-
-    monkeypatch.setattr(transcripts, "get_transcript_segments", fake)
-    out = server.get_transcript_segments("vid", languages=["de"], translate_to="en")
-    assert out == [{"start": 0.0, "text": "hi"}]
-    assert captured["args"] == ("vid", ("de",), "en")
-
-
-def test_get_transcript_segments_tool_uses_default_language(monkeypatch):
-    captured = {}
-    monkeypatch.setattr(
-        transcripts,
-        "get_transcript_segments",
-        lambda *args: captured.setdefault("args", args) or [],
-    )
-    server.get_transcript_segments("vid")
-    assert captured["args"] == ("vid", ("en",), None)
 
 
 def test_build_video_link_tool_delegates(monkeypatch):

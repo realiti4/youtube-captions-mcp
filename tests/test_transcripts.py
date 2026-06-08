@@ -54,10 +54,29 @@ def test_get_transcript_languages_passthrough(fake_api, snippets):
 def test_get_transcript_with_timestamps(fake_api, snippets):
     fake_api.fetch_return = snippets
     out = transcripts.get_transcript(VIDEO, include_timestamps=True)
+    # The fixture snippets are >15s apart, so each lands in its own ~15s block.
     assert out.splitlines() == [
         "[00:00] Hello world",
         "[01:05] second line",
         "[1:02:05] after an hour",
+    ]
+
+
+def test_get_transcript_timestamps_chunks_close_snippets(fake_api):
+    from types import SimpleNamespace
+
+    # Snippets within one ~15s window merge into a single [mm:ss] line. A snippet exactly
+    # _CHUNK_SECONDS (15s) from the block start opens a fresh block -- the boundary is >=, not >.
+    fake_api.fetch_return = [
+        SimpleNamespace(start=0.0, text="one"),
+        SimpleNamespace(start=5.0, text="two"),
+        SimpleNamespace(start=12.0, text="three"),
+        SimpleNamespace(start=15.0, text="four"),
+    ]
+    out = transcripts.get_transcript(VIDEO, include_timestamps=True)
+    assert out.splitlines() == [
+        "[00:00] one two three",
+        "[00:15] four",
     ]
 
 
