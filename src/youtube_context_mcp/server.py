@@ -64,12 +64,12 @@ def get_transcript_segments(
     languages: list[str] | None = None,
     translate_to: str | None = None,
 ) -> list[transcripts.TranscriptSegment]:
-    """Fetch a YouTube video's captions as structured {start, duration, text} segments.
+    """Fetch a YouTube video's captions as structured {start, text} segments.
 
     Like get_transcript, but instead of flattened text it returns each caption snippet with its
-    exact start time (seconds) and duration. Use this when you need timestamps to work with --
-    e.g. feed a segment's start straight into build_video_link to make a "jump to this moment"
-    link. For plain reading/summarizing, get_transcript is usually enough.
+    exact start time (seconds). Use this when you need timestamps to work with -- e.g. feed a
+    segment's start straight into build_video_link to make a "jump to this moment" link. For plain
+    reading/summarizing, get_transcript is usually enough (and far cheaper on tokens).
 
     Args:
         video: A YouTube URL (watch, youtu.be, shorts, embed, live) or an 11-character video ID.

@@ -47,11 +47,11 @@ def test_get_transcript_segments_tool_delegates(monkeypatch):
 
     def fake(video, languages, translate_to):
         captured["args"] = (video, languages, translate_to)
-        return [{"start": 0.0, "duration": 1.0, "text": "hi"}]
+        return [{"start": 0.0, "text": "hi"}]
 
     monkeypatch.setattr(transcripts, "get_transcript_segments", fake)
     out = server.get_transcript_segments("vid", languages=["de"], translate_to="en")
-    assert out == [{"start": 0.0, "duration": 1.0, "text": "hi"}]
+    assert out == [{"start": 0.0, "text": "hi"}]
     assert captured["args"] == ("vid", ("de",), "en")
 
 

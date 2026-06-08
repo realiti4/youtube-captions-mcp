@@ -44,7 +44,6 @@ class TranscriptError(Exception):
 
 class TranscriptSegment(TypedDict):
     start: float  # seconds from the start of the video
-    duration: float  # seconds the segment is shown for
     text: str
 
 
@@ -181,10 +180,12 @@ def get_transcript_segments(
     languages: Sequence[str] = ("en",),
     translate_to: str | None = None,
 ) -> list[TranscriptSegment]:
-    """Fetch a video's transcript as structured ``{start, duration, text}`` segments.
+    """Fetch a video's transcript as structured ``{start, text}`` segments.
 
     Unlike :func:`get_transcript` (which flattens to text), this preserves each snippet's exact
     float ``start``, which feeds straight into ``build_video_link`` with no timestamp re-parsing.
+    (``duration`` is intentionally omitted to keep the per-snippet token cost down -- a YouTube
+    transcript has many short snippets, so repeated fields add up fast.)
 
     Args:
         video: A YouTube URL or 11-character video ID.
@@ -195,7 +196,7 @@ def get_transcript_segments(
         TranscriptError: with a user-facing message if the transcript can't be retrieved.
     """
     snippets = _fetch_snippets(video, languages, translate_to)
-    return [TranscriptSegment(start=s.start, duration=s.duration, text=s.text) for s in snippets]
+    return [TranscriptSegment(start=s.start, text=s.text) for s in snippets]
 
 
 def list_transcripts(video: str) -> dict:

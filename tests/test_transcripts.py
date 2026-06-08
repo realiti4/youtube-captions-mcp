@@ -96,9 +96,9 @@ def test_get_transcript_segments(fake_api, snippets):
     fake_api.fetch_return = snippets
     out = transcripts.get_transcript_segments(f"https://youtu.be/{VIDEO}")
     assert out == [
-        {"start": 0.0, "duration": 2.0, "text": "Hello world"},
-        {"start": 65.0, "duration": 2.0, "text": "second line"},
-        {"start": 3725.0, "duration": 2.0, "text": "after an hour"},
+        {"start": 0.0, "text": "Hello world"},
+        {"start": 65.0, "text": "second line"},
+        {"start": 3725.0, "text": "after an hour"},
     ]
     assert fake_api.calls["fetch"] == {"video_id": VIDEO, "languages": ("en",)}
 
@@ -133,7 +133,7 @@ def test_get_transcript_segments_translate(monkeypatch, snippets):
 
     monkeypatch.setattr(transcripts, "_build_api", lambda: FakeApi())
     out = transcripts.get_transcript_segments(VIDEO, languages=("en",), translate_to="de")
-    assert out[0] == {"start": 0.0, "duration": 2.0, "text": "Hello world"}
+    assert out[0] == {"start": 0.0, "text": "Hello world"}
     assert captured == {"video_id": VIDEO, "languages": ("en",), "translate_to": "de"}
 
 
