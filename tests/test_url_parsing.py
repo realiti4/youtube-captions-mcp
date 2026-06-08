@@ -38,6 +38,8 @@ def test_extract_video_id(value):
         "   ",
         "not a youtube url",
         "https://example.com/watch?v=dQw4w9WgXcQ",  # not a YouTube domain
+        "https://notyoutube.com/watch?v=dQw4w9WgXcQ",  # look-alike host
+        "https://youtube.com.evil.com/watch?v=dQw4w9WgXcQ",  # look-alike host
         "https://www.youtube.com/watch?v=tooShort",  # < 11 chars
     ],
 )

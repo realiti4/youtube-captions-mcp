@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Sequence
+from urllib.parse import parse_qs, urlparse
 
 import requests
 from youtube_transcript_api import (
@@ -29,20 +30,11 @@ from yt_transcript_mcp.proxies import build_proxy_config
 
 DEFAULT_TIMEOUT = 20.0
 
-_VIDEO_ID = r"(?P<id>[A-Za-z0-9_-]{11})"
-_BARE_ID = re.compile(rf"^{_VIDEO_ID}$")
-# Patterns for the common YouTube URL shapes. Subdomains (www., m., music.) all contain the
-# "youtube.com" substring, so matching it as a substring covers them.
-_URL_PATTERNS = [
-    re.compile(p)
-    for p in (
-        rf"(?:youtube\.com|youtube-nocookie\.com)/embed/{_VIDEO_ID}",
-        rf"youtube\.com/shorts/{_VIDEO_ID}",
-        rf"youtube\.com/live/{_VIDEO_ID}",
-        rf"youtu\.be/{_VIDEO_ID}",
-        rf"(?:youtube\.com|youtube-nocookie\.com)/.*[?&]v={_VIDEO_ID}",
-    )
-]
+_BARE_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
+# Hosts we accept, plus their subdomains (www., m., music.).
+_ALLOWED_HOSTS = ("youtube.com", "youtube-nocookie.com", "youtu.be")
+# Path prefixes that carry the video ID as the following path segment.
+_PATH_PREFIXES = {"embed", "shorts", "live", "v"}
 
 
 class TranscriptError(Exception):
@@ -65,22 +57,42 @@ class _TimeoutSession(requests.Session):
         return super().request(*args, **kwargs)
 
 
+def _host_allowed(host: str) -> bool:
+    return any(host == allowed or host.endswith("." + allowed) for allowed in _ALLOWED_HOSTS)
+
+
 def extract_video_id(value: str) -> str:
     """Extract an 11-character YouTube video ID from a URL or a bare ID.
 
+    Only genuine YouTube hosts are accepted (youtube.com and its subdomains, youtu.be, and
+    youtube-nocookie.com), so look-alike hosts such as ``notyoutube.com`` are rejected.
+
     Raises:
-        ValueError: if no video ID can be found.
+        ValueError: if no video ID can be found on a recognised YouTube host.
     """
     value = (value or "").strip()
     if not value:
         raise ValueError("No video URL or ID provided.")
-    bare = _BARE_ID.match(value)
-    if bare:
-        return bare.group("id")
-    for pattern in _URL_PATTERNS:
-        match = pattern.search(value)
-        if match:
-            return match.group("id")
+    if _BARE_ID.match(value):
+        return value
+
+    # Prepend a scheme when missing so urlparse populates the host (e.g. "youtu.be/<id>").
+    parsed = urlparse(value if "://" in value else f"https://{value}")
+    host = (parsed.hostname or "").lower()
+
+    if _host_allowed(host):
+        if host == "youtu.be" or host.endswith(".youtu.be"):
+            candidate = parsed.path.lstrip("/").split("/", 1)[0]
+            if _BARE_ID.match(candidate):
+                return candidate
+        else:
+            query_v = parse_qs(parsed.query).get("v", [])
+            if query_v and _BARE_ID.match(query_v[0]):
+                return query_v[0]
+            parts = [part for part in parsed.path.split("/") if part]
+            if len(parts) >= 2 and parts[0] in _PATH_PREFIXES and _BARE_ID.match(parts[1]):
+                return parts[1]
+
     raise ValueError(
         f"Could not extract a YouTube video ID from {value!r}. "
         "Pass a watch / youtu.be / shorts / embed / live URL, or an 11-character video ID."
