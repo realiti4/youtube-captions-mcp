@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from youtube_captions_mcp.transcripts import extract_video_id
+from youtube_context_mcp.transcripts import extract_video_id
 
 VIDEO_ID = "dQw4w9WgXcQ"
 

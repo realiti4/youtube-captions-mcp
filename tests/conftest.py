@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from youtube_captions_mcp import transcripts
+from youtube_context_mcp import transcripts
 
 
 @dataclass

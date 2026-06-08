@@ -26,7 +26,7 @@ from youtube_transcript_api import (
     YouTubeTranscriptApi,
 )
 
-from youtube_captions_mcp.proxies import build_proxy_config
+from youtube_context_mcp.proxies import build_proxy_config
 
 DEFAULT_TIMEOUT = 20.0
 

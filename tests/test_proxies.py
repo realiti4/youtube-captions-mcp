@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from youtube_transcript_api.proxies import GenericProxyConfig, WebshareProxyConfig
 
-from youtube_captions_mcp.proxies import build_proxy_config
+from youtube_context_mcp.proxies import build_proxy_config
 
 PROXY_ENV = [
     "WEBSHARE_PROXY_USERNAME",

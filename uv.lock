@@ -885,8 +885,8 @@ wheels = [
 ]
 
 [[package]]
-name = "youtube-captions-mcp"
-version = "0.1.0"
+name = "youtube-context-mcp"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },
