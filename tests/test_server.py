@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 
-from yt_transcript_mcp import server, transcripts
+from youtube_captions_mcp import server, transcripts
 
 
 def test_tools_registered():
@@ -45,7 +45,7 @@ def test_list_transcripts_tool_delegates(monkeypatch):
 def test_main_defaults_to_stdio(monkeypatch):
     calls = {}
     monkeypatch.setattr(server.mcp, "run", lambda **kwargs: calls.setdefault("kwargs", kwargs))
-    monkeypatch.setattr(sys, "argv", ["yt-transcript-mcp"])
+    monkeypatch.setattr(sys, "argv", ["youtube-captions-mcp"])
     server.main()
     assert calls["kwargs"] == {}
 
@@ -57,7 +57,7 @@ def test_main_http_sets_transport_and_binding(monkeypatch):
     monkeypatch.setattr(
         sys,
         "argv",
-        ["yt-transcript-mcp", "--transport", "http", "--host", "0.0.0.0", "--port", "9000"],
+        ["youtube-captions-mcp", "--transport", "http", "--host", "0.0.0.0", "--port", "9000"],
     )
     try:
         server.main()

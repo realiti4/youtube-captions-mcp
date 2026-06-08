@@ -2,6 +2,6 @@
 
 from importlib.metadata import version
 
-__version__ = version("yt-transcript-mcp")
+__version__ = version("youtube-captions-mcp")
 
 __all__ = ["__version__"]

@@ -16,8 +16,8 @@ from youtube_transcript_api import (
     VideoUnavailable,
 )
 
-from yt_transcript_mcp import transcripts
-from yt_transcript_mcp.transcripts import TranscriptError, _format_timestamp, _map_error
+from youtube_captions_mcp import transcripts
+from youtube_captions_mcp.transcripts import TranscriptError, _format_timestamp, _map_error
 
 VIDEO = "dQw4w9WgXcQ"
 

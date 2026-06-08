@@ -1,4 +1,4 @@
-# yt-transcript-mcp
+# youtube-captions-mcp
 
 A small [MCP](https://modelcontextprotocol.io) server that lets agents read YouTube video
 transcripts so you can ask questions about a video, summarize it, or pull quotes.
@@ -14,13 +14,13 @@ which does all the actual fetching. This project just exposes it as two MCP tool
 Run it on demand with [uv](https://docs.astral.sh/uv/) (no install needed):
 
 ```bash
-uvx yt-transcript-mcp
+uvx youtube-captions-mcp
 ```
 
 Or install it:
 
 ```bash
-pip install yt-transcript-mcp
+pip install youtube-captions-mcp
 ```
 
 ## Use it with an agent
@@ -30,9 +30,9 @@ Add it to your MCP client config:
 ```json
 {
   "mcpServers": {
-    "yt-transcript": {
+    "youtube-captions": {
       "command": "uvx",
-      "args": ["yt-transcript-mcp"]
+      "args": ["youtube-captions-mcp"]
     }
   }
 }
@@ -41,7 +41,7 @@ Add it to your MCP client config:
 Or, in Claude Code:
 
 ```bash
-claude mcp add yt-transcript -- uvx yt-transcript-mcp
+claude mcp add youtube-captions -- uvx youtube-captions-mcp
 ```
 
 ### Running over HTTP (e.g. LM Studio on Windows + WSL2)
@@ -51,7 +51,7 @@ different host — for example LM Studio on Windows while this server runs in WS
 long-lived HTTP server instead and point the client at a URL:
 
 ```bash
-yt-transcript-mcp --transport http --host 0.0.0.0 --port 8000
+youtube-captions-mcp --transport http --host 0.0.0.0 --port 8000
 ```
 
 Then add it by URL:
@@ -59,7 +59,7 @@ Then add it by URL:
 ```json
 {
   "mcpServers": {
-    "yt-transcript": { "url": "http://localhost:8000/mcp" }
+    "youtube-captions": { "url": "http://localhost:8000/mcp" }
   }
 }
 ```
@@ -99,7 +99,7 @@ With no env set, requests go out directly.
 uv sync
 uv run ruff check . && uv run ruff format --check .
 uv run pytest
-uv run mcp dev src/yt_transcript_mcp/server.py --with-editable .   # interactive inspector
+uv run mcp dev src/youtube_captions_mcp/server.py --with-editable .   # interactive inspector
 ```
 
 ## License

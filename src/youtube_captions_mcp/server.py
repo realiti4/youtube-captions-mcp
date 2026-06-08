@@ -7,9 +7,9 @@ from typing import TypedDict
 
 from mcp.server.fastmcp import FastMCP
 
-from yt_transcript_mcp import transcripts
+from youtube_captions_mcp import transcripts
 
-mcp = FastMCP("yt-transcript")
+mcp = FastMCP("youtube-captions")
 
 
 class TranscriptInfo(TypedDict):
@@ -80,7 +80,7 @@ def main() -> None:
     different host than the server -- e.g. LM Studio on Windows connecting to this server
     running in WSL2 at ``http://localhost:8000/mcp``.
     """
-    parser = argparse.ArgumentParser(prog="yt-transcript-mcp", description=main.__doc__)
+    parser = argparse.ArgumentParser(prog="youtube-captions-mcp", description=main.__doc__)
     parser.add_argument(
         "--transport",
         choices=["stdio", "http", "sse"],

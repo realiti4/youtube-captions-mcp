@@ -1,5 +1,5 @@
 [project]
-name = "yt-transcript-mcp"
+name = "youtube-captions-mcp"
 version = "0.1.0"
 description = "A small MCP server for fetching YouTube video transcripts, wrapping youtube-transcript-api"
 readme = "README.md"
@@ -27,19 +27,19 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/realiti4/yt-transcript-mcp"
-Repository = "https://github.com/realiti4/yt-transcript-mcp"
-Issues = "https://github.com/realiti4/yt-transcript-mcp/issues"
+Homepage = "https://github.com/realiti4/youtube-captions-mcp"
+Repository = "https://github.com/realiti4/youtube-captions-mcp"
+Issues = "https://github.com/realiti4/youtube-captions-mcp/issues"
 
 [project.scripts]
-yt-transcript-mcp = "yt_transcript_mcp.server:main"
+youtube-captions-mcp = "youtube_captions_mcp.server:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/yt_transcript_mcp"]
+packages = ["src/youtube_captions_mcp"]
 
 [dependency-groups]
 dev = [
