@@ -5,9 +5,9 @@ from __future__ import annotations
 import argparse
 from typing import TypedDict
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Image
 
-from youtube_context_mcp import links, metadata, transcripts
+from youtube_context_mcp import links, media, metadata, transcripts
 
 mcp = FastMCP("youtube-context")
 
@@ -138,6 +138,65 @@ def get_most_replayed(video: str, top_n: int = 8) -> metadata.MostReplayed:
             opening (t~=0) peak, when present, is returned in addition to these.
     """
     return metadata.get_most_replayed(video, top_n)
+
+
+@mcp.tool(structured_output=False)
+def get_video_frame(video: str, at: int | float | str, max_width: int = 640) -> Image:
+    """Capture a single still frame (screenshot) from a YouTube video at a moment and return it as
+    an image, so a multimodal model can answer "what's on screen here?".
+
+    Use this to see the video at a specific time -- e.g. read a slide, a caption burned into the
+    video, or a UI being demoed. Pair it with get_most_replayed or get_transcript(include_timestamps
+    =True) to pick an interesting moment, then grab the frame there.
+
+    Requires ffmpeg on the server. The captured frame is the nearest keyframe at or just before the
+    requested moment (it can be off by a second or two) and is downscaled to max_width to keep the
+    response small.
+
+    Args:
+        video: A YouTube URL (watch, youtu.be, shorts, embed, live) or an 11-character video ID.
+        at: The moment to capture -- seconds (e.g. 90) or a "mm:ss" / "h:mm:ss" string.
+        max_width: Max width in pixels of the returned image (clamped 64..1280; default 640).
+            Smaller is cheaper on a vision model's image-token budget.
+    """
+    return media.get_video_frame(video, at, max_width)
+
+
+@mcp.tool(structured_output=False)
+def get_video_preview(
+    video: str,
+    tiles: int = 12,
+    tile_width: int = 320,
+    start: int | float | str | None = None,
+    end: int | float | str | None = None,
+) -> tuple[str, Image]:
+    """Get a visual overview of a YouTube video as ONE tiled contact-sheet image: `tiles` frames
+    sampled evenly across the video (or across a start..end window of it), plus a text legend
+    mapping each tile to its mm:ss timestamp.
+
+    Use this to see what's going on across a video (talking head vs slides vs demo footage, scene
+    changes, "is there a chart anywhere?") and to pick moments worth a closer look. To inspect one
+    part in more detail, call it again with start/end around that part -- but pick the window from
+    the transcript, chapters, or get_most_replayed first and zoom once; don't binary-search the
+    video with repeated sheets, since every returned image stays in context. Read each tile's
+    timestamp from the legend -- do not count grid cells yourself. Tiles are small and not
+    readable: to read a slide, caption, or UI, follow up with get_video_frame(video, at=<that
+    tile's timestamp>). Windows under ~1 minute may return near-duplicate tiles (frames land on
+    keyframes, a few seconds apart).
+
+    Requires ffmpeg on the server (the system binary, or the one bundled by the [media] extra).
+
+    Args:
+        video: A YouTube URL (watch, youtu.be, shorts, embed, live) or an 11-character video ID.
+        tiles: How many frames to sample (clamped 4..24; default 12).
+        tile_width: Width in pixels of each tile (clamped 160..480; default 320). The whole sheet
+            stays around 1000-1300 px wide at the defaults -- cheap on a vision model's image
+            budget while keeping tiles recognizable.
+        start: Optional window start -- seconds (e.g. 90) or a "mm:ss" / "h:mm:ss" string.
+            Defaults to the beginning of the video.
+        end: Optional window end, same forms. Defaults to (and is clamped to) the video's end.
+    """
+    return media.get_video_preview(video, tiles, tile_width, start, end)
 
 
 def main() -> None:

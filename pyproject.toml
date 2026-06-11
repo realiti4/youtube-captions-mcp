@@ -1,6 +1,6 @@
 [project]
 name = "youtube-context-mcp"
-version = "0.5.1"
+version = "0.6.0"
 description = "A small MCP server giving agents YouTube video context: transcripts, deep links, and metadata"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -26,6 +26,13 @@ classifiers = [
     "Topic :: Multimedia :: Video",
     "Topic :: Utilities",
 ]
+
+[project.optional-dependencies]
+# The media tools (get_video_frame, get_video_preview) shell out to ffmpeg. The system binary is
+# preferred when on PATH; this extra installs imageio-ffmpeg, whose wheel bundles a static ffmpeg,
+# so `pip install youtube-context-mcp[media]` is self-contained without weighing down the base
+# install.
+media = ["imageio-ffmpeg>=0.5"]
 
 [project.urls]
 Homepage = "https://github.com/realiti4/youtube-context-mcp"

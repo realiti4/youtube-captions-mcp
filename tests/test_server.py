@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 
-from youtube_context_mcp import links, metadata, server, transcripts
+from youtube_context_mcp import links, media, metadata, server, transcripts
 
 
 def test_tools_registered():
@@ -15,6 +15,8 @@ def test_tools_registered():
         "list_transcripts",
         "get_video_metadata",
         "get_most_replayed",
+        "get_video_frame",
+        "get_video_preview",
     }
 
 
@@ -106,6 +108,55 @@ def test_get_most_replayed_tool_default(monkeypatch):
     )
     server.get_most_replayed("vid")
     assert captured["args"] == ("vid", 8)
+
+
+def test_get_video_frame_tool_delegates(monkeypatch):
+    captured = {}
+    sentinel = object()
+
+    def fake(video, at, max_width):
+        captured["args"] = (video, at, max_width)
+        return sentinel
+
+    monkeypatch.setattr(media, "get_video_frame", fake)
+    assert server.get_video_frame("vid", "1:30", max_width=320) is sentinel
+    assert captured["args"] == ("vid", "1:30", 320)
+
+
+def test_get_video_frame_tool_default_max_width(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(
+        media,
+        "get_video_frame",
+        lambda *args: captured.setdefault("args", args) or "X",
+    )
+    server.get_video_frame("vid", 10)
+    assert captured["args"] == ("vid", 10, 640)
+
+
+def test_get_video_preview_tool_delegates(monkeypatch):
+    captured = {}
+    sentinel = ("legend", object())
+
+    def fake(video, tiles, tile_width, start, end):
+        captured["args"] = (video, tiles, tile_width, start, end)
+        return sentinel
+
+    monkeypatch.setattr(media, "get_video_preview", fake)
+    out = server.get_video_preview("vid", tiles=9, tile_width=240, start="1:00", end=180)
+    assert out is sentinel
+    assert captured["args"] == ("vid", 9, 240, "1:00", 180)
+
+
+def test_get_video_preview_tool_defaults(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(
+        media,
+        "get_video_preview",
+        lambda *args: captured.setdefault("args", args) or ("legend", None),
+    )
+    server.get_video_preview("vid")
+    assert captured["args"] == ("vid", 12, 320, None, None)
 
 
 def test_main_defaults_to_stdio(monkeypatch):
