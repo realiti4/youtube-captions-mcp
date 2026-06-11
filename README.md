@@ -82,30 +82,40 @@ Then add it by URL:
 In every tool, `video` accepts a full YouTube URL (watch, youtu.be, shorts, embed, live) or a
 bare 11-character video ID.
 
-### `get_transcript(video, languages=["en"], include_timestamps=False, translate_to=None)`
+### `get_transcript`
+
+`get_transcript(video, languages=["en"], include_timestamps=False, translate_to=None)`
 
 Returns the transcript as plain text. Set `include_timestamps=True` to group it into ~15s
 `[mm:ss]` blocks — handy for locating a topic and building a link; `translate_to` takes an ISO
 language code.
 
-### `build_video_link(video, start)`
+### `build_video_link`
+
+`build_video_link(video, start)`
 
 Builds a `watch?v=…&t=<seconds>` URL that opens the video at a moment, so a user can click
 straight to it. `start` is seconds or a `"mm:ss"` / `"h:mm:ss"` string. Pairs with
 `get_transcript(include_timestamps=True)` to turn "where is X mentioned?" into a clickable link.
 
-### `list_transcripts(video)`
+### `list_transcripts`
+
+`list_transcripts(video)`
 
 Lists available transcripts (language, code, manual vs auto-generated, translatable) plus the
 translation targets. Use it when `get_transcript` can't find your language.
 
-### `get_video_metadata(video, include_description=False)`
+### `get_video_metadata`
+
+`get_video_metadata(video, include_description=False)`
 
 Returns the video's title, channel, upload date, duration, view/like counts, chapters and tags —
 answers "what's this video / who made it?" without fetching the transcript. Set
 `include_description=True` to also include the (often long) description.
 
-### `get_most_replayed(video, top_n=8)`
+### `get_most_replayed`
+
+`get_most_replayed(video, top_n=8)`
 
 Returns the video's **most-replayed moments** (YouTube's viewer-interest heatmap) as up to
 `top_n` distinct high-interest content regions — each with a `peak_label`/`region_label`
@@ -118,7 +128,9 @@ not a real rewatch; it's returned *in addition to* `top_n` so it can't crowd out
 peaks. `has_data` is `false` when YouTube has no heatmap (common for newer/low-traffic videos
 and some Shorts).
 
-### `get_video_frame(video, at, max_width=640)`
+### `get_video_frame`
+
+`get_video_frame(video, at, max_width=640)`
 
 Captures a single still **frame** (screenshot) at a moment and returns it as an image, so a
 multimodal model can answer "what's on screen here?" — read a slide, a burned-in caption, or a
@@ -127,7 +139,9 @@ keyframe at/just before it and is downscaled to `max_width` (clamped 64–1280) 
 the image budget. Pairs with `get_most_replayed` / `get_transcript(include_timestamps=True)` to
 pick the moment first. **Requires [ffmpeg](#media-tools-ffmpeg).**
 
-### `get_video_preview(video, tiles=12, tile_width=320, start=None, end=None)`
+### `get_video_preview`
+
+`get_video_preview(video, tiles=12, tile_width=320, start=None, end=None)`
 
 Returns a **contact sheet**: `tiles` frames sampled evenly across the whole video, composited
 into one tiled grid image, plus a text legend mapping each tile to its `mm:ss` timestamp — a
